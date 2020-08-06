@@ -8,6 +8,8 @@ var app = express();
 app.use(bodyParser.json());
 app.use(express.static('images'));
 const config = require("./config.json");
+const { Translate } = require('@google-cloud/translate').v2;
+const translate = new Translate();
 
 // init framework
 var framework = new framework(config);
@@ -200,6 +202,14 @@ framework.hears('reply', function (bot, trigger) {
   bot.reply(trigger.message, msg_attach);
 });
 
+framework.hears('translate', function (bot, trigger) {
+  console.log("someone asked for a translation");
+  responded = true;
+  var text = trigger.message.text;
+  text = text.substring(11);
+  bot.say(text);
+});
+
 /* On mention with unexpected bot command
    Its a good practice is to gracefully handle unexpected input
 */
@@ -223,6 +233,15 @@ function sendHelp(bot) {
     '5. **say hi to everyone** (everyone gets a greeting using a call to the Webex SDK) \n' +
     '6. **reply** (have bot reply to your message) \n' +
     '7. **help** (what you are reading now)');
+}
+
+async function translateText(text, target) {
+  let [translations] = await translate.translate(text, target);
+  translations = Array.isArray(translations) ? translations : [translations];
+  console.log('Translations:');
+  translations.forEach((translation, i) => {
+  console.log(`${text[i]} => (${target}) ${translation}`);
+  });
 }
 
 
