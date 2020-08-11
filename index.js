@@ -8,8 +8,9 @@ var app = express();
 app.use(bodyParser.json());
 app.use(express.static('images'));
 const config = require("./config.json");
-const { Translate } = require('@google-cloud/translate').v2;
-const translate = new Translate();
+var translate = require('google-translate')(apiKey);
+var NLP = require('google-nlp');
+var nlp = new NLP(apiKey);
 
 // init framework
 var framework = new framework(config);
@@ -130,7 +131,7 @@ framework.hears("say hi to everyone", function (bot) {
       console.error(`Call to sdk.memberships.get() failed: ${e.messages}`);
       bot.say('Hello everybody!');
     });
-});
+}); 
 
 // Buttons & Cards data
 let cardJSON =
@@ -206,9 +207,41 @@ framework.hears('translate', function (bot, trigger) {
   console.log("someone asked for a translation");
   responded = true;
   var text = trigger.message.text;
-  text = text.substring(11);
-  bot.say(text);
+  text = text.substring(21);
+  () => translateText(bot, trigger, text);
+    
 });
+
+async function translateText ( bot, trigger, text ) {
+  var sentimentResult = "";
+  console.log("1");
+
+  await nlp.analyzeSentiment( text )
+    .then(function( sentiment ) {
+      console.log("2");
+      if (sentiment.documentSentiment.score > 0.0) {
+        sentimentResult = "happy";
+        console.log("happy");
+      } else if (sentiment.documentSentiment.score < 0.0) {
+        sentimentResult = "sad";
+        console.log("sad");
+      } else {
+        sentimentResult = "neutral";
+      }
+      console.log(sentiment.documentSentiment.score);
+    })
+    .catch(function( error ) {
+      console.log( 'Error:', error.message );
+    });
+  
+  await translate.translate(text, 'es', function(err, translation) {
+    console.log("3");
+    if (translation) {
+      var message = translation.translatedText + " (" + sentimentResult + ")";
+      bot.reply( trigger.message, message);
+    }
+  });
+}
 
 /* On mention with unexpected bot command
    Its a good practice is to gracefully handle unexpected input
@@ -232,16 +265,8 @@ function sendHelp(bot) {
     '4. **card me** (a cool card!) \n' +
     '5. **say hi to everyone** (everyone gets a greeting using a call to the Webex SDK) \n' +
     '6. **reply** (have bot reply to your message) \n' +
-    '7. **help** (what you are reading now)');
-}
-
-async function translateText(text, target) {
-  let [translations] = await translate.translate(text, target);
-  translations = Array.isArray(translations) ? translations : [translations];
-  console.log('Translations:');
-  translations.forEach((translation, i) => {
-  console.log(`${text[i]} => (${target}) ${translation}`);
-  });
+    '7. **translate** (have bot translate your message) \n' +
+    '8. **help** (what you are reading now)');
 }
 
 

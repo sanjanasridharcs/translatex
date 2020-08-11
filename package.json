@@ -25,6 +25,9 @@
     "@google-cloud/translate": "^6.0.2",
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
+    "google-nlp": "^0.5.6",
+    "google-nlp-api": "^0.1.18",
+    "google-translate": "^3.0.0",
     "webex-node-bot-framework": "^1.0.5"
   }
 }
