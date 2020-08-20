@@ -8,9 +8,11 @@ var app = express();
 app.use(bodyParser.json());
 app.use(express.static('images'));
 const config = require("./config.json");
+const apiKey = "";
 var translate = require('google-translate')(apiKey);
 var NLP = require('google-nlp');
 var nlp = new NLP(apiKey);
+var language = 'es';
 
 // init framework
 var framework = new framework(config);
@@ -66,27 +68,22 @@ framework.hears(/help|what can i (do|say)|what (can|do) you do/i, function (bot,
     .catch((e) => console.error(`Problem in help hander: ${e.message}`));
 });
 
-/* On mention with command
-ex User enters @botname framework, the bot will write back in markdown
-*/
-framework.hears('framework', function (bot) {
-  console.log("framework command received");
-  responded = true;
-  bot.say("markdown", "The primary purpose for the [webex-node-bot-framework](https://github.com/jpjpjp/webex-node-bot-framework) was to create a framework based on the [webex-jssdk](https://webex.github.io/webex-js-sdk) which continues to be supported as new features and functionality are added to Webex. This version of the proejct was designed with two themes in mind: \n\n\n * Mimimize Webex API Calls. The original flint could be quite slow as it attempted to provide bot developers rich details about the space, membership, message and message author. This version eliminates some of that data in the interests of efficiency, (but provides convenience methods to enable bot developers to get this information if it is required)\n * Leverage native Webex data types. The original flint would copy details from the webex objects such as message and person into various flint objects. This version simply attaches the native Webex objects. This increases the framework's efficiency and makes it future proof as new attributes are added to the various webex DTOs ");
-});
-
 /* On mention with command, using other trigger data, can use lite markdown formatting
 ex User enters @botname 'info' phrase, the bot will provide personal details
 */
-framework.hears('info', function (bot, trigger) {
-  console.log("info command received");
+framework.hears('changeTo', function (bot, trigger) {
+  console.log("changeTo command received");
   responded = true;
+  var text = trigger.message.text;
+  if (text.substring(0, 10) === "TranslateX") {
+    text = text.substring(20);
+  } else {
+    text = text.substring(9);
+  }
+  language = text;
   //the "trigger" parameter gives you access to data about the user who entered the command
-  let personAvatar = trigger.person.avatar;
-  let personEmail = trigger.person.emails[0];
-  let personDisplayName = trigger.person.displayName;
-  let outputString = `Here is your personal information: \n\n\n **Name:** ${personDisplayName}  \n\n\n **Email:** ${personEmail} \n\n\n **Avatar URL:** ${personAvatar}`;
-  bot.say("markdown", outputString);
+  let outputString = `Language changed to ${language}!`;
+  bot.reply(trigger.message, outputString);
 });
 
 /* On mention with bot data 
@@ -190,17 +187,11 @@ framework.hears('card me', function (bot, trigger) {
 /* On mention reply example
 ex User enters @botname 'reply' phrase, the bot will post a threaded reply
 */
-framework.hears('reply', function (bot, trigger) {
-  console.log("someone asked for a reply.  We will give them two.");
+framework.hears('language', function (bot, trigger) {
+  console.log("someone asked for language");
   responded = true;
-  bot.reply(trigger.message, 
-    'This is threaded reply sent using the `bot.reply()` method.',
-    'markdown');
-  var msg_attach = {
-    text: "This is also threaded reply with an attachment sent via bot.reply(): ",
-    file: 'https://media2.giphy.com/media/dTJd5ygpxkzWo/giphy-downsized-medium.gif'
-  };
-  bot.reply(trigger.message, msg_attach);
+  outputMessage = "Current Language is " + language;
+  bot.reply(trigger.message, outputMessage);
 });
 
 framework.hears('translate', function (bot, trigger) {
@@ -208,40 +199,38 @@ framework.hears('translate', function (bot, trigger) {
   responded = true;
   var text = trigger.message.text;
   text = text.substring(21);
-  () => translateText(bot, trigger, text);
-    
-});
-
-async function translateText ( bot, trigger, text ) {
-  var sentimentResult = "";
   console.log("1");
 
-  await nlp.analyzeSentiment( text )
+  nlp.analyzeSentiment( text )
     .then(function( sentiment ) {
+      var sentimentResult = "";
       console.log("2");
-      if (sentiment.documentSentiment.score > 0.0) {
-        sentimentResult = "happy";
+      if (sentiment.documentSentiment.score > 0.25) {
+        sentimentResult = "positive - " + sentiment.documentSentiment.score;
         console.log("happy");
-      } else if (sentiment.documentSentiment.score < 0.0) {
-        sentimentResult = "sad";
+      } else if (sentiment.documentSentiment.score < -0.25) {
+        sentimentResult = "negative - " + sentiment.documentSentiment.score;
         console.log("sad");
       } else {
-        sentimentResult = "neutral";
+        sentimentResult = "neutral - " + sentiment.documentSentiment.score;
       }
       console.log(sentiment.documentSentiment.score);
+      translate.translate(text, language, function(err, translation) {
+        console.log("3");
+        if (translation) {
+          var message = translation.translatedText + " (" + sentimentResult + ")";
+          bot.reply(trigger.message, message);
+        }
+      });
     })
     .catch(function( error ) {
       console.log( 'Error:', error.message );
     });
-  
-  await translate.translate(text, 'es', function(err, translation) {
-    console.log("3");
-    if (translation) {
-      var message = translation.translatedText + " (" + sentimentResult + ")";
-      bot.reply( trigger.message, message);
-    }
-  });
-}
+
+    
+});
+
+
 
 /* On mention with unexpected bot command
    Its a good practice is to gracefully handle unexpected input
