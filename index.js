@@ -12,7 +12,7 @@ const apiKey = "";
 var translate = require('google-translate')(apiKey);
 var NLP = require('google-nlp');
 var nlp = new NLP(apiKey);
-var language = 'es';
+var language = {};
 
 // init framework
 var framework = new framework(config);
@@ -31,6 +31,7 @@ framework.on('spawn', (bot, id, actorId) => {
     // don't say anything here or your bot's spaces will get
     // spammed every time your server is restarted
     console.log(`While starting up, the framework found our bot in a space called: ${bot.room.title}`);
+    language[bot.room.id] = "es";
   } else {
     // When actorId is present it means someone added your bot got added to a new space
     // Lets find out more about them..
@@ -80,9 +81,10 @@ framework.hears('changeTo', function (bot, trigger) {
   } else {
     text = text.substring(9);
   }
-  language = text;
+  language[bot.room.id] = text;
+  console.log(bot.room.id);
   //the "trigger" parameter gives you access to data about the user who entered the command
-  let outputString = `Language changed to ${language}!`;
+  let outputString = `Language changed to ${language[bot.room.id]}!`;
   bot.reply(trigger.message, outputString);
 });
 
@@ -190,7 +192,7 @@ ex User enters @botname 'reply' phrase, the bot will post a threaded reply
 framework.hears('language', function (bot, trigger) {
   console.log("someone asked for language");
   responded = true;
-  outputMessage = "Current Language is " + language;
+  outputMessage = "Current Language is " + language[bot.room.id];
   bot.reply(trigger.message, outputMessage);
 });
 
@@ -214,9 +216,10 @@ framework.hears('translate', function (bot, trigger) {
       } else {
         sentimentResult = "neutral - " + sentiment.documentSentiment.score;
       }
+
       console.log(sentiment.documentSentiment.score);
-      translate.translate(text, language, function(err, translation) {
-        console.log("3");
+      translate.translate(text, language[bot.room.id], function(err, translation) {
+        console.log(bot.room.id);
         if (translation) {
           var message = translation.translatedText + " (" + sentimentResult + ")";
           bot.reply(trigger.message, message);
