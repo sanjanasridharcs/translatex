@@ -72,7 +72,7 @@ framework.hears(/help|what can i (do|say)|what (can|do) you do/i, function (bot,
 /* On mention with command, using other trigger data, can use lite markdown formatting
 ex User enters @botname 'info' phrase, the bot will provide personal details
 */
-framework.hears('changeTo', function (bot, trigger) {
+framework.hears('change to', function (bot, trigger) {
   console.log("changeTo command received");
   responded = true;
   var text = trigger.message.text;
@@ -91,26 +91,25 @@ framework.hears('changeTo', function (bot, trigger) {
 /* On mention with bot data 
 ex User enters @botname 'space' phrase, the bot will provide details about that particular space
 */
-framework.hears('space', function (bot) {
-  console.log("space. the final frontier");
+framework.hears('language list', function (bot) {
+  console.log("language list");
   responded = true;
-  let roomTitle = bot.room.title;
-  let spaceID = bot.room.id;
-  let roomType = bot.room.type;
 
-  let outputString = `The title of this space: ${roomTitle} \n\n The roomID of this space: ${spaceID} \n\n The type of this space: ${roomType}`;
-
+  outputString = "Here is a link detailing the two-letter codes for languages. Please use ISO 639-1. \n";
+  outputString += "http://www.loc.gov/standards/iso639-2/php/code_list.php";
   console.log(outputString);
   bot.say("markdown", outputString)
     .catch((e) => console.error(`bot.say failed: ${e.message}`));
 
 });
 
+
 /* 
    Say hi to every member in the space
    This demonstrates how developers can access the webex
    sdk to call any Webex API.  API Doc: https://webex.github.io/webex-js-sdk/api/
 */
+/*
 framework.hears("say hi to everyone", function (bot) {
   console.log("say hi to everyone.  Its a party");
   responded = true;
@@ -172,28 +171,16 @@ let cardJSON =
     }]
 };
 
-/* On mention with card example
-ex User enters @botname 'card me' phrase, the bot will produce a personalized card - https://developer.webex.com/docs/api/guides/cards
 */
-framework.hears('card me', function (bot, trigger) {
-  console.log("someone asked for a card");
-  responded = true;
-  let avatar = trigger.person.avatar;
 
-  cardJSON.body[0].columns[0].items[0].url = (avatar) ? avatar : `${config.webhookUrl}/missing-avatar.jpg`;
-  cardJSON.body[0].columns[0].items[1].text = trigger.person.displayName;
-  cardJSON.body[0].columns[0].items[2].text = trigger.person.emails[0];
-  bot.sendCard(cardJSON, 'This is customizable fallback text for clients that do not support buttons & cards');
-});
-
-/* On mention reply example
+  /* On mention reply example
 ex User enters @botname 'reply' phrase, the bot will post a threaded reply
 */
 framework.hears('language', function (bot, trigger) {
   console.log("someone asked for language");
   responded = true;
   outputMessage = "Current Language is " + language[bot.room.id];
-  bot.reply(trigger.message, outputMessage);
+  bot.reply(trigger.message, outputMessage, "markdown");
 });
 
 framework.hears('translate', function (bot, trigger) {
@@ -208,13 +195,13 @@ framework.hears('translate', function (bot, trigger) {
       var sentimentResult = "";
       console.log("2");
       if (sentiment.documentSentiment.score > 0.25) {
-        sentimentResult = "positive - " + sentiment.documentSentiment.score;
+        sentimentResult = "\u{1F642}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
         console.log("happy");
       } else if (sentiment.documentSentiment.score < -0.25) {
-        sentimentResult = "negative - " + sentiment.documentSentiment.score;
+        sentimentResult = "\u{1F641}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
         console.log("sad");
       } else {
-        sentimentResult = "neutral - " + sentiment.documentSentiment.score;
+        sentimentResult = "\u{1F610}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
       }
 
       console.log(sentiment.documentSentiment.score);
@@ -222,7 +209,7 @@ framework.hears('translate', function (bot, trigger) {
         console.log(bot.room.id);
         if (translation) {
           var message = translation.translatedText + " (" + sentimentResult + ")";
-          bot.reply(trigger.message, message);
+          bot.reply(trigger.message, message, "markdown");
         }
       });
     })
@@ -241,24 +228,53 @@ framework.hears('translate', function (bot, trigger) {
 framework.hears(/.*/, function (bot, trigger) {
   // This will fire for any input so only respond if we haven't already
   if (!responded) {
-    console.log(`catch-all handler fired for user input: ${trigger.text}`);
-    bot.say(`Sorry, I don't know how to respond to "${trigger.text}"`)
-      .then(() => sendHelp(bot))
-      .catch((e) => console.error(`Problem in the unexepected command hander: ${e.message}`));
-  }
-  responded = false;
+    console.log("someone asked for a translation");
+    responded = true;
+    var text = trigger.message.text;
+    text = text.substring(21);
+    console.log("1");
+
+    nlp.analyzeSentiment( text )
+      .then(function( sentiment ) {
+        var sentimentResult = "";
+        console.log("2");
+        if (sentiment.documentSentiment.score > 0.25) {
+          sentimentResult = "\u{1F642}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
+          console.log("happy");
+        } else if (sentiment.documentSentiment.score < -0.25) {
+          sentimentResult = "\u{1F641}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
+          console.log("sad");
+        } else {
+          sentimentResult = "\u{1F610}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
+        }
+
+        console.log(sentiment.documentSentiment.score);
+        translate.translate(text, language[bot.room.id], function(err, translation) {
+          console.log(bot.room.id);
+          if (translation) {
+            var message = translation.translatedText + " (" + sentimentResult + ")";
+            bot.reply(trigger.message, message, "markdown");
+          }
+        })
+        .catch(function(error) {
+          bot.say("Please enter a valid two-letter code for the desired language.");
+          console.log(error.message);
+        });
+      })
+      .catch(function( error ) {
+        console.log( 'Error:', error.message );
+      });
+      responded = true;
+    }
 });
 
 function sendHelp(bot) {
   bot.say("markdown", 'These are the commands I can respond to:', '\n\n ' +
-    '1. **framework**   (learn more about the Webex Bot Framework) \n' +
-    '2. **info**  (get your personal details) \n' +
-    '3. **space**  (get details about this space) \n' +
-    '4. **card me** (a cool card!) \n' +
-    '5. **say hi to everyone** (everyone gets a greeting using a call to the Webex SDK) \n' +
-    '6. **reply** (have bot reply to your message) \n' +
-    '7. **translate** (have bot translate your message) \n' +
-    '8. **help** (what you are reading now)');
+    '1. **change to**   (enter the two-letter code of the language you would like to translate to) \n' +
+    '2. **language list**  (get a list of two-letter codes of languages) \n' +
+    '3. **language**  (get current language the bot is translating to) \n' +
+    '4. **help** (what you are reading now) \n' +
+    '5. anything else - will translate to the desired language');
 }
 
 
