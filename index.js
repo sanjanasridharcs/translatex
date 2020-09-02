@@ -31,7 +31,6 @@ framework.on('spawn', (bot, id, actorId) => {
     // don't say anything here or your bot's spaces will get
     // spammed every time your server is restarted
     console.log(`While starting up, the framework found our bot in a space called: ${bot.room.title}`);
-    language[bot.room.id] = "es";
   } else {
     // When actorId is present it means someone added your bot got added to a new space
     // Lets find out more about them..
@@ -52,6 +51,20 @@ framework.on('spawn', (bot, id, actorId) => {
       }
     });
   }
+
+  bot.webex.memberships.list({roomId: bot.room.id})
+    .then((memberships) => {
+      for (const member of memberships.items) {
+        if (member.personId === bot.person.id) {
+          // Skip myself!
+          continue;
+        }
+        languages[member.personId] = 'es';
+      }
+    })
+    .catch((e) => {
+      console.error(`Error setting up default language: ${e.messages}`);
+    });
 });
 
 
@@ -81,10 +94,10 @@ framework.hears('change to', function (bot, trigger) {
   } else {
     text = text.substring(9);
   }
-  language[bot.room.id] = text;
-  console.log(bot.room.id);
+  language[trigger.person.id] = text;
+  //console.log(bot.room.id);
   //the "trigger" parameter gives you access to data about the user who entered the command
-  let outputString = `Language changed to ${language[bot.room.id]}!`;
+  let outputString = `Language changed to ${language[trigger.person.id]}!`;
   bot.reply(trigger.message, outputString);
 });
 
@@ -179,16 +192,20 @@ ex User enters @botname 'reply' phrase, the bot will post a threaded reply
 framework.hears('language', function (bot, trigger) {
   console.log("someone asked for language");
   responded = true;
-  outputMessage = "Current Language is " + language[bot.room.id];
+  outputMessage = "Current Language is " + language[trigger.person.id];
   bot.reply(trigger.message, outputMessage, "markdown");
 });
 
 framework.hears('translate', function (bot, trigger) {
   console.log("someone asked for a translation");
   responded = true;
+
   var text = trigger.message.text;
   text = text.substring(21);
   console.log("1");
+
+  
+  
 
   nlp.analyzeSentiment( text )
     .then(function( sentiment ) {
@@ -203,12 +220,14 @@ framework.hears('translate', function (bot, trigger) {
       } else {
         sentimentResult = "\u{1F610}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
       }
+      bot.reply(trigger.message, sentimentResult, "markdown");
 
       console.log(sentiment.documentSentiment.score);
-      translate.translate(text, language[bot.room.id], function(err, translation) {
-        console.log(bot.room.id);
+
+      translate.translate(text, language[trigger.person.id], function(err, translation) {
+        console.log(trigger.person.id);
         if (translation) {
-          var message = translation.translatedText + " (" + sentimentResult + ")";
+          var message = translation.translatedText;
           bot.reply(trigger.message, message, "markdown");
         }
       });
