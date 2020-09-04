@@ -8,7 +8,7 @@ var app = express();
 app.use(bodyParser.json());
 app.use(express.static('images'));
 const config = require("./config.json");
-const apiKey = "";
+const apiKey = "AIzaSyA9oTAg3qZ211ckPdY3nEiTLdKNnFf24Rs";
 var translate = require('google-translate')(apiKey);
 var NLP = require('google-nlp');
 var nlp = new NLP(apiKey);
@@ -52,21 +52,8 @@ framework.on('spawn', (bot, id, actorId) => {
     });
   }
 
-  bot.webex.memberships.list({roomId: bot.room.id})
-    .then((memberships) => {
-      for (const member of memberships.items) {
-        if (member.personId === bot.person.id) {
-          // Skip myself!
-          continue;
-        }
-        languages[member.personId] = 'es';
-      }
-    })
-    .catch((e) => {
-      console.error(`Error setting up default language: ${e.messages}`);
-    });
+  
 });
-
 
 //Process incoming messages
 
@@ -90,9 +77,9 @@ framework.hears('change to', function (bot, trigger) {
   responded = true;
   var text = trigger.message.text;
   if (text.substring(0, 10) === "TranslateX") {
-    text = text.substring(20);
+    text = text.substring(21);
   } else {
-    text = text.substring(9);
+    text = text.substring(10);
   }
   language[trigger.person.id] = text;
   //console.log(bot.room.id);
@@ -204,8 +191,9 @@ framework.hears('translate', function (bot, trigger) {
   text = text.substring(21);
   console.log("1");
 
-  
-  
+  if (!language[trigger.person.id]) {
+    language[trigger.person.id] = 'es';
+  }
 
   nlp.analyzeSentiment( text )
     .then(function( sentiment ) {
