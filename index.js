@@ -8,7 +8,7 @@ var app = express();
 app.use(bodyParser.json());
 app.use(express.static('images'));
 const config = require("./config.json");
-const apiKey = "AIzaSyA9oTAg3qZ211ckPdY3nEiTLdKNnFf24Rs";
+const apiKey = "";
 var translate = require('google-translate')(apiKey);
 var NLP = require('google-nlp');
 var nlp = new NLP(apiKey);
