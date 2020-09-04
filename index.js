@@ -8,7 +8,11 @@ var app = express();
 app.use(bodyParser.json());
 app.use(express.static('images'));
 const config = require("./config.json");
+<<<<<<< Updated upstream
 const apiKey = "AIzaSyA9oTAg3qZ211ckPdY3nEiTLdKNnFf24Rs";
+=======
+const apiKey = ""; // enter API key for Google Translate API and Google NLP API here
+>>>>>>> Stashed changes
 var translate = require('google-translate')(apiKey);
 var NLP = require('google-nlp');
 var nlp = new NLP(apiKey);
@@ -103,76 +107,6 @@ framework.hears('language list', function (bot) {
 
 });
 
-
-/* 
-   Say hi to every member in the space
-   This demonstrates how developers can access the webex
-   sdk to call any Webex API.  API Doc: https://webex.github.io/webex-js-sdk/api/
-*/
-/*
-framework.hears("say hi to everyone", function (bot) {
-  console.log("say hi to everyone.  Its a party");
-  responded = true;
-  // Use the webex SDK to get the list of users in this space
-  bot.webex.memberships.list({roomId: bot.room.id})
-    .then((memberships) => {
-      for (const member of memberships.items) {
-        if (member.personId === bot.person.id) {
-          // Skip myself!
-          continue;
-        }
-        let displayName = (member.personDisplayName) ? member.personDisplayName : member.personEmail;
-        bot.say(`Hello ${displayName}`);
-      }
-    })
-    .catch((e) => {
-      console.error(`Call to sdk.memberships.get() failed: ${e.messages}`);
-      bot.say('Hello everybody!');
-    });
-}); 
-
-// Buttons & Cards data
-let cardJSON =
-{
-  $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
-  type: 'AdaptiveCard',
-  version: '1.0',
-  body:
-    [{
-      type: 'ColumnSet',
-      columns:
-        [{
-          type: 'Column',
-          width: '5',
-          items:
-            [{
-              type: 'Image',
-              url: 'Your avatar appears here!',
-              size: 'large',
-              horizontalAlignment: "Center",
-              style: 'person'
-            },
-            {
-              type: 'TextBlock',
-              text: 'Your name will be here!',
-              size: 'medium',
-              horizontalAlignment: "Center",
-              weight: 'Bolder'
-            },
-            {
-              type: 'TextBlock',
-              text: 'And your email goes here!',
-              size: 'small',
-              horizontalAlignment: "Center",
-              isSubtle: true,
-              wrap: false
-            }]
-        }]
-    }]
-};
-
-*/
-
   /* On mention reply example
 ex User enters @botname 'reply' phrase, the bot will post a threaded reply
 */
@@ -235,53 +169,21 @@ framework.hears('translate', function (bot, trigger) {
 framework.hears(/.*/, function (bot, trigger) {
   // This will fire for any input so only respond if we haven't already
   if (!responded) {
-    console.log("someone asked for a translation");
-    responded = true;
-    var text = trigger.message.text;
-    text = text.substring(21);
-    console.log("1");
-
-    nlp.analyzeSentiment( text )
-      .then(function( sentiment ) {
-        var sentimentResult = "";
-        console.log("2");
-        if (sentiment.documentSentiment.score > 0.25) {
-          sentimentResult = "\u{1F642}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
-          console.log("happy");
-        } else if (sentiment.documentSentiment.score < -0.25) {
-          sentimentResult = "\u{1F641}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
-          console.log("sad");
-        } else {
-          sentimentResult = "\u{1F610}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
-        }
-
-        console.log(sentiment.documentSentiment.score);
-        translate.translate(text, language[bot.room.id], function(err, translation) {
-          console.log(bot.room.id);
-          if (translation) {
-            var message = translation.translatedText + " (" + sentimentResult + ")";
-            bot.reply(trigger.message, message, "markdown");
-          }
-        })
-        .catch(function(error) {
-          bot.say("Please enter a valid two-letter code for the desired language.");
-          console.log(error.message);
-        });
-      })
-      .catch(function( error ) {
-        console.log( 'Error:', error.message );
-      });
-      responded = true;
-    }
+    console.log(`catch-all handler fired for user input: ${trigger.text}`);
+    bot.say(`Sorry, I don't know how to respond to "${trigger.text}"`)
+      .then(() => sendHelp(bot))
+      .catch((e) => console.error(`Problem in the unexepected command hander: ${e.message}`));
+  }
+  responded = false;
 });
 
 function sendHelp(bot) {
   bot.say("markdown", 'These are the commands I can respond to:', '\n\n ' +
-    '1. **change to**   (enter the two-letter code of the language you would like to translate to) \n' +
-    '2. **language list**  (get a list of two-letter codes of languages) \n' +
-    '3. **language**  (get current language the bot is translating to) \n' +
-    '4. **help** (what you are reading now) \n' +
-    '5. anything else - will translate to the desired language');
+    '1. **translate <message to be translated>**  (translate the message to your desired language) \n' +
+    '2. **change to <desired language>**   (enter the two-letter code of the language you would like to translate to) \n' +
+    '3. **language list**  (get a list of two-letter codes of languages) \n' +
+    '4. **language**  (get current language the bot is translating to) \n' +
+    '5. **help** (what you are reading now)');
 }
 
 
