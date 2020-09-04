@@ -8,11 +8,7 @@ var app = express();
 app.use(bodyParser.json());
 app.use(express.static('images'));
 const config = require("./config.json");
-<<<<<<< Updated upstream
-const apiKey = "AIzaSyA9oTAg3qZ211ckPdY3nEiTLdKNnFf24Rs";
-=======
-const apiKey = ""; // enter API key for Google Translate API and Google NLP API here
->>>>>>> Stashed changes
+const apiKey = ""; // enter API key for Google Cloud here
 var translate = require('google-translate')(apiKey);
 var NLP = require('google-nlp');
 var nlp = new NLP(apiKey);
@@ -73,8 +69,9 @@ framework.hears(/help|what can i (do|say)|what (can|do) you do/i, function (bot,
     .catch((e) => console.error(`Problem in help hander: ${e.message}`));
 });
 
-/* On mention with command, using other trigger data, can use lite markdown formatting
-ex User enters @botname 'info' phrase, the bot will provide personal details
+/* 
+Allows the user to enter a two-letter language code to change the 
+language they would like translations in
 */
 framework.hears('change to', function (bot, trigger) {
   console.log("changeTo command received");
@@ -86,17 +83,16 @@ framework.hears('change to', function (bot, trigger) {
     text = text.substring(10);
   }
   language[trigger.person.id] = text;
-  //console.log(bot.room.id);
   //the "trigger" parameter gives you access to data about the user who entered the command
   let outputString = `Language changed to ${language[trigger.person.id]}!`;
   bot.reply(trigger.message, outputString);
 });
 
-/* On mention with bot data 
-ex User enters @botname 'space' phrase, the bot will provide details about that particular space
+/* 
+Allows user to easily access a link detailed two-letter codes for languages 
 */
-framework.hears('language list', function (bot) {
-  console.log("language list");
+framework.hears('codes', function (bot) {
+  console.log("codes");
   responded = true;
 
   outputString = "Here is a link detailing the two-letter codes for languages. Please use ISO 639-1. \n";
@@ -108,7 +104,7 @@ framework.hears('language list', function (bot) {
 });
 
   /* On mention reply example
-ex User enters @botname 'reply' phrase, the bot will post a threaded reply
+Allows user to see what their current language is set to
 */
 framework.hears('language', function (bot, trigger) {
   console.log("someone asked for language");
@@ -117,6 +113,10 @@ framework.hears('language', function (bot, trigger) {
   bot.reply(trigger.message, outputMessage, "markdown");
 });
 
+/*
+Translates the user's message into their desired language and
+provides the sentiment analysis of the phrase prior to translation
+*/
 framework.hears('translate', function (bot, trigger) {
   console.log("someone asked for a translation");
   responded = true;
@@ -133,6 +133,8 @@ framework.hears('translate', function (bot, trigger) {
     .then(function( sentiment ) {
       var sentimentResult = "";
       console.log("2");
+      var phrase = " on a scale of -1.0 to 1.0";
+      
       if (sentiment.documentSentiment.score > 0.25) {
         sentimentResult = "\u{1F642}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
         console.log("happy");
@@ -142,9 +144,12 @@ framework.hears('translate', function (bot, trigger) {
       } else {
         sentimentResult = "\u{1F610}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
       }
-      bot.reply(trigger.message, sentimentResult, "markdown");
-
-      console.log(sentiment.documentSentiment.score);
+      translate.translate(phrase, language[trigger.person.id], function(err, translation) {
+        if (translation) {
+          var message = sentimentResult + translation.translatedText;
+          bot.reply(trigger.message, sentimentResult, "markdown");
+        }
+      });
 
       translate.translate(text, language[trigger.person.id], function(err, translation) {
         console.log(trigger.person.id);
@@ -179,9 +184,9 @@ framework.hears(/.*/, function (bot, trigger) {
 
 function sendHelp(bot) {
   bot.say("markdown", 'These are the commands I can respond to:', '\n\n ' +
-    '1. **translate <message to be translated>**  (translate the message to your desired language) \n' +
-    '2. **change to <desired language>**   (enter the two-letter code of the language you would like to translate to) \n' +
-    '3. **language list**  (get a list of two-letter codes of languages) \n' +
+    '1. **translate <message>**  (translate message to desired language) \n' +
+    '2. **change to <2 letter language code)**   (enter the two-letter code of the language you would like to translate to) \n' +
+    '3. **codes**  (get a list of two-letter codes of languages) \n' +
     '4. **language**  (get current language the bot is translating to) \n' +
     '5. **help** (what you are reading now)');
 }
