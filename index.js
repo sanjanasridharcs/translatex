@@ -74,7 +74,6 @@ Allows the user to enter a two-letter language code to change the
 language they would like translations in
 */
 framework.hears('change to', function (bot, trigger) {
-  console.log("changeTo command received");
   responded = true;
   var text = trigger.message.text;
   if (text.substring(0, 10) === "TranslateX") {
@@ -91,14 +90,11 @@ framework.hears('change to', function (bot, trigger) {
 /* 
 Allows user to easily access a link detailed two-letter codes for languages 
 */
-framework.hears('codes', function (bot) {
-  console.log("codes");
+framework.hears('codes', function (bot, trigger) {
   responded = true;
 
-  outputString = "Here is a link detailing the two-letter codes for languages. Please use ISO 639-1. \n";
-  outputString += "http://www.loc.gov/standards/iso639-2/php/code_list.php";
-  console.log(outputString);
-  bot.say("markdown", outputString)
+  outputString = "Here is a link detailing the two-letter codes for languages. Please use ISO 639-1. http://www.loc.gov/standards/iso639-2/php/code_list.php";
+  bot.reply(trigger.message, outputString, "markdown")
     .catch((e) => console.error(`bot.say failed: ${e.message}`));
 
 });
@@ -107,7 +103,6 @@ framework.hears('codes', function (bot) {
 Allows user to see what their current language is set to
 */
 framework.hears('language', function (bot, trigger) {
-  console.log("someone asked for language");
   responded = true;
   outputMessage = "Current Language is " + language[trigger.person.id];
   bot.reply(trigger.message, outputMessage, "markdown");
@@ -118,12 +113,14 @@ Translates the user's message into their desired language and
 provides the sentiment analysis of the phrase prior to translation
 */
 framework.hears('translate', function (bot, trigger) {
-  console.log("someone asked for a translation");
   responded = true;
 
   var text = trigger.message.text;
-  text = text.substring(21);
-  console.log("1");
+  if (text.substring(0, 10) === "TranslateX") {
+    text = text.substring(21);
+  } else {
+    text = text.substring(10);
+  }
 
   if (!language[trigger.person.id]) {
     language[trigger.person.id] = 'es';
@@ -132,30 +129,29 @@ framework.hears('translate', function (bot, trigger) {
   nlp.analyzeSentiment( text )
     .then(function( sentiment ) {
       var sentimentResult = "";
-      console.log("2");
-      var phrase = " on a scale of -1.0 to 1.0";
+      var phrase = "on a scale of -1.0 to 1.0";
       
       if (sentiment.documentSentiment.score > 0.25) {
-        sentimentResult = "\u{1F642}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
-        console.log("happy");
+        sentimentResult = "\u{1F642}: " + sentiment.documentSentiment.score;
       } else if (sentiment.documentSentiment.score < -0.25) {
-        sentimentResult = "\u{1F641}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
-        console.log("sad");
+        sentimentResult = "\u{1F641}: " + sentiment.documentSentiment.score;
       } else {
-        sentimentResult = "\u{1F610}: " + sentiment.documentSentiment.score + " on a scale of -1.0 to 1.0";
+        sentimentResult = "\u{1F610}: " + sentiment.documentSentiment.score;
       }
-      translate.translate(phrase, language[trigger.person.id], function(err, translation) {
-        if (translation) {
-          var message = sentimentResult + translation.translatedText;
-          bot.reply(trigger.message, sentimentResult, "markdown");
-        }
-      });
 
       translate.translate(text, language[trigger.person.id], function(err, translation) {
-        console.log(trigger.person.id);
         if (translation) {
-          var message = translation.translatedText;
-          bot.reply(trigger.message, message, "markdown");
+          var translatedPhrase = translation.translatedText;
+          translate.translate(phrase, language[trigger.person.id], function(err, translation) {
+            if (translation) {
+              var sentimentPhrase = sentimentResult + " " + translation.translatedText;
+              bot.reply(trigger.message, sentimentPhrase, "markdown")
+              .then (() => {
+                bot.reply(trigger.message, translatedPhrase, "markdown");
+              });
+              
+            }
+          });
         }
       });
     })
